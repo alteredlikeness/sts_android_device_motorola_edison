@@ -1,5 +1,5 @@
 # inherit from common
--include device/motorola/omap4-kexec-common/BoardConfigCommon.mk
+-include device/motorola/omap4-common/BoardConfigCommon.mk
 
 # inherit from the proprietary version
 -include vendor/motorola/edison/BoardConfigVendor.mk
@@ -13,7 +13,7 @@ BOARD_KERNEL_BASE := 0x80000000
 BOARD_PAGE_SIZE := 0x4096
 
 # Kernel Build
-TARGET_KERNEL_SOURCE := kernel/motorola/omap4-kexec-common
+TARGET_KERNEL_SOURCE := kernel/motorola/omap4-common
 TARGET_KERNEL_CONFIG := mapphone_edison_defconfig
 
 TARGET_USES_CUSTOM_INITFILES := true

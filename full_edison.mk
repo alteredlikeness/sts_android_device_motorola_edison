@@ -31,7 +31,7 @@ PRODUCT_COPY_FILES += \
     device/motorola/edison/prebuilt/etc/apns-conf.xml:system/etc/apns-conf.xml
 endif
 
-PRODUCT_BUILD_PROP_OVERRIDES += PRODUCT_NAME=umts_edison
+PRODUCT_BUILD_PROP_OVERRIDES += PRODUCT_NAME=edison
 
 # Inherit from those products. Most specific first.
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
