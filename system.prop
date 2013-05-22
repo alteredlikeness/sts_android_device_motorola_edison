@@ -1,7 +1,6 @@
 #
 # system.prop for Edison
 #
-
 rild.libpath=/system/lib/libu300-ril.so
 rild.libargs=-c CAIF -i rmnet
 ro.sf.lcd_density=240
@@ -100,89 +99,3 @@ ro.mot.btpan.disable = true
 # BEGIN Motorola, GNB873 , 21-Apr-2012, IKHSS6UPGR-6821
 ro.mot.btdun.disable = true
 # END Motorola, IKHSS6UPGR-6821
-
-#
-# ADDITIONAL_BUILD_PROPERTIES
-#
-dalvik.vm.heapstartsize=5m
-dalvik.vm.heapgrowthlimit=42m
-dalvik.vm.heapsize=128m
-drm.service.enabled=true
-ro.com.google.clientidbase=android-motorola
-ro.com.google.clientidbase.ms=android-att-us
-ro.com.google.clientidbase.am=android-att-us
-ro.com.google.clientidbase.gmm=android-motorola
-ro.com.google.clientidbase.yt=android-motorola
-ro.mot.ste.modem.ttydevice=/dev/ttyO0
-persist.ril.mux.noofchannels=8
-persist.ril.mux.ttydevice=/dev/ttyO0
-persist.ril.modem.ttydevice=/dev/ttySPI0
-persist.ril.features=0x06
-persist.ril.mux.retries=500
-persist.ril.mux.sleep=2
-ro.config.notification_sound=OnTheHunt.ogg
-ro.config.alarm_alert=Alarm_Classic.ogg
-ro.com.google.gmsversion=4.0_r2
-ro.crypto.state=unencrypted
-ro.media.enc.aud.fileformat=amr
-ro.media.enc.aud.codec=amrnb
-android.os.build.BRAND=ATT
-ro.mot.noroamingicon=1
-ro.hss6upgrade.hide.motocastid=TRUE
-ro.media.camcorder.1080p=mp4,h264,30,15000000,aac,128000,44100,2
-ro.media.camcorder.720p=mp4,h264,30,10000000,aac,128000,44100,2
-ro.media.camcorder.d1NTSC=mp4,h264,30,6000000,aac,128000,44100,2
-ro.media.camcorder.vga=mp4,h264,30,4000000,aac,128000,44100,2
-ro.media.camcorder.cif=mp4,h264,30,1500000,aac,128000,44100,2
-ro.media.camcorder.qvga=mp4,h264,15,500000,aac,64000,44100,2
-ro.media.camcorder.mms=3gp,h264,15,128000,amrnb,12200,8000,1
-ro.media.camcorder.mmsres=qvga
-ro.camcorder.zoom=true
-ro.media.capture.maxres=8m
-ro.media.capture.fast.fps=4
-ro.media.capture.slow.fps=120
-ro.media.capture.flash=led
-ro.media.capture.flashMinV=3300000
-ro.media.capture.torchIntensity=40
-ro.media.capture.flashIntensity=70
-ro.media.panorama.defres=3264x1840
-ro.media.panorama.frameres=1280x720
-ro.camcorder.mute=false
-ro.camera.dynamicFocus=true
-ro.camcorder.videoModes=false
-media.stagefright.enable-player=true
-media.stagefright.enable-meta=true
-media.stagefright.enable-scan=false
-media.stagefright.enable-http=true
-media.stagefright.enable-record=false
-ro.media.camera.focal=3451.0,3451.0
-ro.media.camera.principal=1632.0,1224.0
-ro.media.camera.skew=0.0
-ro.media.camera.distortion=0.0,0.0,0.0,0.0,0.0
-ro.media.camera.calresolution=3264,2448
-ro.mot.setuptype=2
-dalvik.vm.dexopt-flags=m=y
-net.bt.name=Android
-dalvik.vm.stack-trace-file=/data/anr/traces.txt
-ro.mot.dpmext=true
-ro.com.google.clientid=android-motorola
-ro.url.legal=http://www.google.com/intl/%s/mobile/android/basic/phone-legal.html
-ro.url.legal.android_privacy=http://www.google.com/intl/%s/mobile/android/basic/privacy.html
-ro.build.version.full=JB_Version.4.1.1_r3.MB865.ATT.en.EU
-ro.mot.hidden_keyboards=evfwd
-ro.mot.build.version.sdk_int=6
-ro.mot.hw.fingerprint.enable=1
-
-ro.setupwizard.enable_bypass=1
-persist.sys.usb.config=mass_storage,adb
-
-# Additions
-com.ti.omap_enhancement=true
-hwui.render_dirty_regions=false
-persist.sys.root_access=3
-ro.hwc.legacy_api=true
-ro.product.use_charge_counter=1
-persist.sys.gsm_signalstrength=true
-persist.sys.moto_oem_telephony=false
-persist.sys.moto_imsi_fix=false
-ro.config.not_world_phone=true
