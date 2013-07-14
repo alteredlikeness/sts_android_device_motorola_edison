@@ -1,7 +1,7 @@
-import /init.safestrap-${ro.boot.safestrap.romslot}.rc
-
 on init
-    loglevel 8
+    exec /sbin/fixboot.sh
+
+loglevel 8
 
     export EXTERNAL_STORAGE /storage/sdcard1
     export SECONDARY_STORAGE /storage/sdcard0
@@ -20,24 +20,27 @@ on init
     mkdir /preinstall 0771 system system
     mkdir /cdrom 0770 system system
 
-    symlink /data/tmp /tmp
-
+# Permissions for RIL. Need to be set before boot.
+    chown radio radio /sys/class/radio/w3g_lte/command
     chmod 0660 /sys/bus/usb/devices/usb1/power/control
     chmod 0660 /sys/bus/usb/devices/usb2/power/control
     chown system radio /sys/bus/usb/devices/usb1/power/control
     chown system radio /sys/bus/usb/devices/usb2/power/control
-
-
-# change permission/ownership for command sys file of mdm6600 ctrl driver if present
     chown system radio /sys/class/radio/mdm6600/command
 
 on fs
-#   now handled in init.safestrap-*.rc
-#   mount ext3 /dev/block/system /system wait discard noatime nodiratime barrier=1
-#   mount ext3 /dev/block/userdata /data discard nosuid nodev noatime nodiratime
-#   mount ext3 /dev/block/cache /cache discard nosuid nodev noatime nodiratime
-    mount ext3 /dev/block/pds /pds nosuid nodev noatime nodiratime
+# begin SS3 setup
+    mount rootfs rootfs / rw remount
+    mkdir /ss 0777 root root
+    mount vfat /dev/block/mmcblk1p25 /ss
+# end SS3 setup
+    mount ext3 loop@/ss/safestrap/rom-slot1/system.img /system wait noatime nodiratime barrier=1
+    mount ext3 loop@/ss/safestrap/rom-slot1/userdata.img /data nosuid nodev noatime nodiratime
+    mount ext3 loop@/ss/safestrap/rom-slot1/cache.img /cache nosuid nodev noatime nodiratime
 on post-fs
+    exec /system/bin/pdsbackup.sh
+    # Load FIPS kernel module
+    exec /system/bin/fips_loader /system/lib/modules
 # Enable PVR modules
     insmod /system/lib/modules/pvrsrvkm_sgx540_120.ko
     insmod /system/lib/modules/omaplfb_sgx540_120.ko
@@ -54,6 +57,7 @@ on post-fs
 # Create mountpoints and mount tmpfs
     mkdir /misc 0770 system misc
     mkdir /sd-ext 0771 system system
+    symlink /data/tmp /tmp
     mount tmpfs tmpfs /tmp
 
     # Same reason as /data above
@@ -163,13 +167,16 @@ on post-fs
 # Install kernel modules
 # Install product specific kernel modules
     exec /system/bin/load_modules.sh
+# Load BT userspace driver
+    insmod /system/lib/modules/btwilink.ko
+    insmod /system/lib/modules/tty_hci.ko
+# Install webtop kernel modules
+    insmod /system/lib/modules/evfwd.ko
 # chown/chmod for FOTA
     chown system system /cache/fota
     chmod 0770 /cache/fota
     setprop wifi.interface "wlan0"
     setprop softap.interface "wlan0"
-# Load BT userspace driver
-    insmod /system/lib/modules/tty_hci.ko
 # Load wifi drivers (all except wl12xx_sdio)
     mkdir /data/misc/wifi/sockets 0770 wifi wifi
     mkdir /data/misc/dhcp 0770 dhcp dhcp
@@ -219,6 +226,15 @@ on post-fs-data
     chmod 0660 /sys/class/ste/gpio190/value
     chown root radio /sys/class/ste/gpio190/value
     mkdir /data/ste_modem_panics 0770 system radio
+ 
+    # bluetooth power up/down interface
+    #write sys/class/rfkill/rfkill0/state 0
+    #write sys/class/rfkill/rfkill0/type bluetooth
+    #chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
+    #chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    #chmod 0664 /sys/class/rfkill/rfkill0/type
+    #chmod 0664 /sys/class/rfkill/rfkill0/state
+       
     # create logger folder
     mkdir /data/logger 0750 log log
     mkdir /data/panicreports 0775 root radio
@@ -293,6 +309,17 @@ on boot
     setprop ro.sys.atvc_allow_ap_mot_log 0
     setprop ro.sys.atvc_allow_simswap 0
     setprop ro.sys.atvc_allow_gki_log 0
+# OSH properties
+    setprop sys.SystemMode RM_SM_MOBILE
+    setprop sys.FbOwner 3
+    setprop sys.DispOwnerLcd 3
+    setprop sys.DispOwnerHdmi 7
+    setprop sys.AiwFocus 3
+    setprop sys.AMActiveTask 2
+    # display fb2 on overlay 0 for trackpad
+    write /sys/class/graphics/fb2/overlays 3
+    write /sys/class/graphics/fb0/overlays 2
+    write /sys/class/graphics/fb2/overlays 0
 # Change the ownership of led files.
    chown system system /sys/class/leds/lcd-backlight/als
    chown system system /sys/class/leds/lcd-backlight/pwm_mode
@@ -461,7 +488,12 @@ on boot
    # Change permission of secret_off to allow system access
    chmod 0660 /sys/devices/omapdss/display0/secret_off
    chown system system /sys/devices/omapdss/display0/secret_off
+   # Change permission of evfwd.ko sysfs to allow system access
+   chown system system /sys/devices/platform/evfwdrel/rel
+   chown system system /sys/devices/platform/evfwdkbd/kbd
+   chown system system /sys/devices/platform/evfwdabs/abs
    # Change file permissions for Thermal Manager
+   
    # For OMAP CPU Temp
    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
@@ -506,6 +538,7 @@ on boot
 
 # Start services
     exec /system/bin/mot_boot_mode
+    start wifical_check
 # Set core max size (2G)
     setrlimit 4 2147483648 2147483648
     mount debugfs /sys/kernel/debug /sys/kernel/debug
@@ -522,6 +555,7 @@ on charger
     trigger post-fs
     trigger post-fs-data
     trigger start-charging
+
 on start-charging
     chown system system /sys/power/state
     chmod 0660 /sys/power/state
@@ -548,10 +582,30 @@ on property:sys.chargeonly.mode=1
     start whisperd
     start charge_only_mode
 # Power up to suspend
+service tund /system/bin/tund
+    class core
+    socket tund stream 0660 vpn system
+    ioprio be 2
+service nexus /system/bin/nexus
+    class core
+    socket nexus stream 0660 root system
+    disabled
 service dnsmasq /system/bin/logwrapper /system/bin/dnsmasq -C/data/misc/wifi/dns.conf -k
     class main
     group wifi
     disabled
+    oneshot
+service mynet_start /system/bin/logwrapper /system/bin/sh /data/misc/wifi/forward_start.sh
+    class main
+    disabled
+    oneshot
+service mynet_stop /system/bin/logwrapper /system/bin/sh /data/misc/wifi/forward_stop.sh
+    class main
+    disabled
+    oneshot
+#Run multiconfig script to check if config is updated
+service start_mc_service /system/bin/sh /system/bin/multiconfig_boot_script.sh
+    class core
     oneshot
 # aplogd on at boot in emulator
 on property:ro.kernel.qemu=1
@@ -580,6 +634,15 @@ on property:ro.hdcp.support=1
 on property:ro.hdcp.support=2
     chown system media /dev/omap-hdcp
     chmod 0660 /dev/omap-hdcp
+# The following services are added by moto
+service qe /xbin/qe /system
+    class core
+    oneshot
+service atvc /system/bin/dbvc_atvc_property_set
+    class core
+    user system
+    group system mot_tpapi
+    oneshot
 service gkisystem /system/bin/gkisystem
     class main
     socket location_shim stream 660 radio system
@@ -645,10 +708,18 @@ service charge_only_mode /system/bin/charge_only_mode
     user root
     group graphics system input
     disabled
+service catcommands /system/bin/catcommands
+    class core
+    group radio
 service whisperd /system/bin/whisperd /dev/ttyO1
     class core
     user mot_whisper
     group mot_whisper mot_pwric
+    oneshot
+service msp430 /system/bin/msp430 boot
+    class core
+    user compass
+    group compass misc input
     oneshot
 service ssmgrd /system/xbin/ssmgrd
     class main
@@ -658,6 +729,16 @@ service uim /system/bin/uim-sysfs
     class core
     user root
     group bluetooth net_bt_admin
+service initial_regdom /system/bin/initial_regdom.sh
+    class main
+    disabled
+    oneshot
+on property:wlan.driver.status=ok
+    chown wifi wifi /sys/devices/platform/wl1271/bt_coex_state
+    start initial_regdom
+on property:init.svc.hostapd=running
+    start initial_regdom
+  
 service hciattach /system/bin/hciattach -l
     class main
     user bluetooth
@@ -754,6 +835,46 @@ service hostapd_bin /system/bin/hostapd -d /data/misc/wifi/hostapd.conf
     socket wpa_wlan0 dgram 660 wifi wifi
     class main
     disabled
+    oneshot  
+
+
+service tcmdhelp /system/bin/tcmdhelp
+    class main
+    socket tcmdhelp stream 0600 mot_tcmd mot_tcmd
+    oneshot
+    disabled
+# turn on wifi for tcmd step one
+on property:tcmd.load_wlan=1
+    insmod /system/lib/modules/tiwlan_drv.ko
+# turn on wifi for tcmd step two
+on property:tcmd.load_wlan=2
+    start wlan_loader
+# turn on wifi for tcmd step three
+on property:tcmd.load_wlan=3
+    exec /system/bin/ifconfig tiwlan0 up
+# turn on rfmd wifi for tcmd step four
+on property:tcmd.load_wlan=4
+    start wlan_loader_rfmd
+# turn off wifi for tcmd step one
+on property:tcmd.unload_wlan=1
+    exec /system/bin/ifconfig tiwlan0 down
+# turn off wifi for tcmd step two
+on property:tcmd.unload_wlan=2
+    exec /system/bin/rmmod tiwlan_drv
+    setprop wlan.driver.status unloaded
+# turn on bluetooth for tcmd
+on property:tcmd.bt_mod=1
+    insmod /system/lib/modules/wl127x_test.ko
+#turn off bluetooth for tcmd
+on property:tcmd.bt_mod=0
+    exec /system/bin/rmmod wl127x_test
+#execute tcmdhelp
+on property:tcmd.start_tcmdhelp=1
+    start tcmdhelp
+service baseimage /system/bin/dspexec -v -T /system/lib/dsp/baseimage.dof
+    class media_early_init
+    user media
+    group media graphics
     oneshot
 service pvrsrv /system/vendor/bin/pvrsrvinit
     class core
@@ -776,6 +897,9 @@ service smc /system/bin/startup_smc.sh
     user mot_tpapi
     group mot_tpapi
     disabled
+    oneshot
+service pm_init /system/bin/sh /system/usr/bin/pm_init.sh
+    class main
     oneshot
 service modemlog /system/bin/modemlog
     class core
@@ -801,6 +925,16 @@ service fmradio /system/bin/fmradioserver
     user system
     group bluetooth net_bt_admin net_raw net_admin misc
     disabled
+service ftmipcd /system/bin/ftmipcd
+    class main
+    user radio
+    group radio inet
+service qbplogd /system/bin/qbplogd
+    class main
+    user radio
+    group sdcard_rw radio inet
+    oneshot
+    disabled
 service dund_dialup /system/bin/dund --listen --channel=6 --nodetach --dialup
     class main
     group net_bt net_bt_admin
@@ -811,6 +945,30 @@ service secclkd /system/bin/secclkd
     socket secclk_socket stream 660 mot_secclkd mot_secclkd radio
     user mot_tpapi
     group mot_tpapi mot_sec_rtc mot_secclkd radio
+service gadget-lte-modem /system/bin/tty2ttyd ril.wrigley.modem.tty /dev/ttyGS1 0 512
+    user radio
+    group radio
+    disabled
+#start Authentec VPN service
+service vpnclientpm /system/bin/vpnclientpm
+    class main
+    user root
+service aepls001 /system/bin/aepls001
+    class main
+    socket aepls001 stream 0666 system system
+    user nobody
+    group nobody
+on property:ro.bootmode=bp-tools
+    start tcmd
+    start gadget-qbp-modem
+    start gadget-qbp-diag
+    write /proc/sys/net/ipv4/ip_forward 1
+    start wrigley-diag
+    start logcatd-blan
+service JuniperVPNTools /system/bin/JuniperVPNTools
+    class main
+    user vpn
+    group vpn net_admin net_raw
 service thermal_manager /system/bin/thermaldaemon
     class main
     user system
@@ -823,6 +981,9 @@ on property:sys.mot.encrypt.test=1
 on property:sys.mot.encrypt.pass.prot=1
     exec /system/bin/enc_mgt_tool --password_prot
     setprop sys.mot.encrypt.pass.prot ""
+# Stop ril-daemon for wifi-only devices
+on property:ro.carrier=wifi-only
+    stop ril-daemon
 # Enable Hotplug governor only for OMAP ES2.2 Silicon
 on property:ro.revision=34
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor hotplug
@@ -830,3 +991,23 @@ service upgrade_certs /system/bin/upgrade_certs
     disabled
     user system
     group system
+# Wifi check
+service wifical_check /system/bin/sh /system/bin/wificalcheck.sh
+    disabled
+    class late_start
+    user root
+    group wifi
+    oneshot
+
+# Wifi calibrate
+service wifi_calibrator /system/bin/sh /system/bin/wifical.sh
+    disabled
+    class late_start
+    user root
+    group wifi
+    oneshot
+
+# Very first boot. We need to set the MAC address
+on property:persist.wlan.ti.calibrated=0
+    start wifi_calibrator
+    setprop persist.wlan.ti.calibrated 1

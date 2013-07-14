@@ -25,13 +25,7 @@
 PRODUCT_PACKAGES := \
     Gallery
 
-#if we do this after the full_base_telephony is included some of these don't get picked up..
-ifeq ($(TARGET_PRODUCT),full_edison)
-PRODUCT_COPY_FILES += \
-    device/motorola/edison/prebuilt/etc/apns-conf.xml:system/etc/apns-conf.xml
-endif
-
-PRODUCT_BUILD_PROP_OVERRIDES += PRODUCT_NAME=edison
+PRODUCT_BUILD_PROP_OVERRIDES += PRODUCT_NAME=umts_edison
 
 # Inherit from those products. Most specific first.
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
