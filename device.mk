@@ -6,7 +6,7 @@ $(call inherit-product, device/motorola/omap4-common/common.mk)
 DEVICE_FOLDER := device/motorola/edison
 
 # Device overlay
-    DEVICE_PACKAGE_OVERLAYS += $(DEVICE_FOLDER)/overlay/aosp
+DEVICE_PACKAGE_OVERLAYS += device/motorola/edison/overlay
 
 # Hardware HALs
 PRODUCT_PACKAGES += \
