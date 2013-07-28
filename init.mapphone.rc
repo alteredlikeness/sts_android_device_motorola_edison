@@ -284,6 +284,17 @@ on boot
     setprop ro.sys.atvc_allow_ap_mot_log 0
     setprop ro.sys.atvc_allow_simswap 0
     setprop ro.sys.atvc_allow_gki_log 0
+# OSH properties
+    setprop sys.SystemMode RM_SM_MOBILE
+    setprop sys.FbOwner 3
+    setprop sys.DispOwnerLcd 3
+    setprop sys.DispOwnerHdmi 7
+    setprop sys.AiwFocus 3
+    setprop sys.AMActiveTask 2
+    # display fb2 on overlay 0 for trackpad
+    write /sys/class/graphics/fb2/overlays 3
+    write /sys/class/graphics/fb0/overlays 2
+    write /sys/class/graphics/fb2/overlays 0
 # Change the ownership of led files.
    chown system system /sys/class/leds/lcd-backlight/als
    chown system system /sys/class/leds/lcd-backlight/pwm_mode
