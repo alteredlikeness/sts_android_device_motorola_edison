@@ -1,26 +1,23 @@
-import /init.safestrap-${ro.boot.safestrap.romslot}.rc
-
 on init
-    loglevel 8
+    exec /sbin/fixboot.sh
 
-    export EXTERNAL_STORAGE /storage/sdcard1
-    export SECONDARY_STORAGE /storage/sdcard0
+loglevel 8
+
+    export EXTERNAL_STORAGE /storage/sdcard0
 
     mkdir /storage/sdcard0 0000 system system
-    mkdir /storage/sdcard1 0000 system system
     # for backwards compatibility
-    symlink /storage/sdcard1 /sdcard
-    symlink /storage/sdcard1 /mnt/sdcard
+    symlink /storage/sdcard0 /sdcard
+    symlink /storage/sdcard0 /mnt/sdcard
 
     # create removable USB Mass Storage mountpoints
     mkdir /storage/usb0 0000 system system
     mkdir /storage/usb1 0000 system system
 
     mkdir /pds 0775 system system
+    mkdir /data/tmp 0777 system system
     mkdir /preinstall 0771 system system
     mkdir /cdrom 0770 system system
-
-    symlink /data/tmp /tmp
 
     chmod 0660 /sys/bus/usb/devices/usb1/power/control
     chmod 0660 /sys/bus/usb/devices/usb2/power/control
@@ -32,11 +29,12 @@ on init
     chown system radio /sys/class/radio/mdm6600/command
 
 on fs
-#   now handled in init.safestrap-*.rc
-#   mount ext3 /dev/block/system /system wait discard noatime nodiratime barrier=1
-#   mount ext3 /dev/block/userdata /data discard nosuid nodev noatime nodiratime
-#   mount ext3 /dev/block/cache /cache discard nosuid nodev noatime nodiratime
-    mount ext3 /dev/block/pds /pds nosuid nodev noatime nodiratime
+    mount ext3 /dev/block/mmcblk1p21 /system wait noatime nodiratime barrier=1
+    mount ext3 /dev/block/mmcblk1p7 /pds nosuid nodev noatime nodiratime
+    mount ext3 /dev/block/mmcblk1p25 /data nosuid nodev noatime nodiratime
+    mount ext3 /dev/block/mmcblk1p22 /cache nosuid nodev noatime nodiratime
+    mount ext3 /dev/block/mmcblk1p23 /preinstall nosuid nodev noatime nodiratime
+
 on post-fs
 # Enable PVR modules
     insmod /system/lib/modules/pvrsrvkm_sgx540_120.ko
@@ -45,7 +43,7 @@ on post-fs
     chown system system /pds
     chmod 0775 /pds
 
-    mount ext3 /dev/block/system /system ro noatime nodiratime remount
+    mount ext3 /dev/block/mmcblk1p21 /system ro noatime nodiratime remount
     mount rootfs rootfs / rw remount
 # Backward compatibility
     symlink /dev /dev/netmux
@@ -54,6 +52,7 @@ on post-fs
 # Create mountpoints and mount tmpfs
     mkdir /misc 0770 system misc
     mkdir /sd-ext 0771 system system
+    symlink /data/tmp /tmp
     mount tmpfs tmpfs /tmp
 
     # Same reason as /data above
@@ -163,12 +162,8 @@ on post-fs
 # Install kernel modules
 # Install product specific kernel modules
     exec /system/bin/load_modules.sh
-# chown/chmod for FOTA
-    chown system system /cache/fota
-    chmod 0770 /cache/fota
-    setprop wifi.interface "wlan0"
-    setprop softap.interface "wlan0"
 # Load BT userspace driver
+    insmod /system/lib/modules/btwilink.ko
     insmod /system/lib/modules/tty_hci.ko
 # Load wifi drivers (all except wl12xx_sdio)
     mkdir /data/misc/wifi/sockets 0770 wifi wifi
@@ -181,7 +176,6 @@ on post-fs
     exec /system/bin/motobox mkswap /dev/block/zram0
     exec /system/bin/motobox swapon /dev/block/zram0
 on post-fs-data
-    mkdir /data/tmp 0777 system system
     copy /proc/apanic_app_threads /data/dontpanic/apanic_app_threads
     chown root log /data/dontpanic/apanic_app_threads
     chmod 0660 /data/dontpanic/apanic_app_threads
@@ -193,9 +187,6 @@ on post-fs-data
     write /data/tmp/bluedroid_ref 0
     chown system system /data/tmp/bluedroid_ref
     chmod 0660 /data/tmp/bluedroid_ref
-    # create moto specific dirs for mystuff
-    mkdir /data/download 0775 system system
-    mkdir /data/download/mystuff 0775 system system
     # fix cache for market access
     chmod 775 /cache
     mkdir /cache/download 0775 system system
@@ -506,6 +497,7 @@ on boot
 
 # Start services
     exec /system/bin/mot_boot_mode
+    start wifical_check
 # Set core max size (2G)
     setrlimit 4 2147483648 2147483648
     mount debugfs /sys/kernel/debug /sys/kernel/debug
@@ -522,6 +514,7 @@ on charger
     trigger post-fs
     trigger post-fs-data
     trigger start-charging
+
 on start-charging
     chown system system /sys/power/state
     chmod 0660 /sys/power/state
@@ -548,11 +541,25 @@ on property:sys.chargeonly.mode=1
     start whisperd
     start charge_only_mode
 # Power up to suspend
+
 service dnsmasq /system/bin/logwrapper /system/bin/dnsmasq -C/data/misc/wifi/dns.conf -k
     class main
     group wifi
     disabled
     oneshot
+
+service dbus /system/bin/dbus-daemon --system --nofork
+    class main
+    socket dbus stream 660 bluetooth radio
+    user bluetooth
+    group bluetooth net_bt_admin
+
+service atvc /system/bin/dbvc_atvc_property_set
+    class core
+    user system
+    group system mot_tpapi
+    oneshot
+
 # aplogd on at boot in emulator
 on property:ro.kernel.qemu=1
     start aplogd
@@ -594,9 +601,9 @@ service locEe /system/bin/ee_driver
     user radio
     group radio inet sdcard_rw
 on property:sys.shutdown.requested=1
-    term mid
+    stop mid
 on property:sys.shutdown.requested=0
-    term mid
+    stop mid
 service mid /system/bin/mid --cfg /system/etc/mid.conf
     class core
     user root
@@ -760,12 +767,6 @@ service pvrsrv /system/vendor/bin/pvrsrvinit
     user root
     group root
     oneshot
-service bugtogo /system/bin/bugtogo.sh
-    class main
-    disabled
-    user root
-    oneshot
-    keycodes 114 115
 service pppd-ril /system/bin/pppd-ril /dev/ttyUSB0 call pppd-ril.options plugin /system/lib/libpppd_plugin-ril.so
     class main
     user root
@@ -826,7 +827,25 @@ on property:sys.mot.encrypt.pass.prot=1
 # Enable Hotplug governor only for OMAP ES2.2 Silicon
 on property:ro.revision=34
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor hotplug
-service upgrade_certs /system/bin/upgrade_certs
+# Add any hotplug tuning parameters here.
+
+# Wifi check
+service wifical_check /system/bin/sh /system/bin/wificalcheck.sh
     disabled
-    user system
-    group system
+    class late_start
+    user root
+    group wifi
+    oneshot
+
+# Wifi calibrate
+service wifi_calibrator /system/bin/sh /system/bin/wifical.sh
+    disabled
+    class late_start
+    user root
+    group wifi
+    oneshot
+
+# Very first boot. We need to set the MAC address
+on property:persist.wlan.ti.calibrated=0
+    start wifi_calibrator
+    setprop persist.wlan.ti.calibrated 1
