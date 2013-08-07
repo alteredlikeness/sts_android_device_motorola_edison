@@ -51,8 +51,9 @@ PRODUCT_COPY_FILES += \
 
 # Prebuilts
 PRODUCT_COPY_FILES += \
+    $(DEVICE_FOLDER)/media_profiles.xml:system/etc/media_profiles.xml \
     $(DEVICE_FOLDER)/apns-conf.xml:system/etc/apns-conf.xml \
-    $(DEVICE_FOLDER)/media_profiles.xml:system/etc/media_profiles.xml
+    $(DEVICE_FOLDER)/gps.conf:system/etc/gps.conf \
 
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 $(call inherit-product-if-exists, vendor/motorola/edison/edison-vendor.mk)
