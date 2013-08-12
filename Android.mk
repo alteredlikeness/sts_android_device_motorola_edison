@@ -14,7 +14,8 @@
 
 ifeq ($(TARGET_DEVICE),edison)
 
-LOCAL_PATH:= $(call my-dir)
+DEVICE_PATH := $(call my-dir)
+LOCAL_PATH := $(DEVICE_PATH)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE       := fstab.mapphone_umts
@@ -24,6 +25,6 @@ LOCAL_SRC_FILES    := fstab.mapphone_umts
 LOCAL_MODULE_PATH  := $(TARGET_ROOT_OUT)
 include $(BUILD_PREBUILT)
 
-include $(all-subdir-makefiles)
+include $(call first-makefiles-under,$(DEVICE_PATH))
 
 endif
