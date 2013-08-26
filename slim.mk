@@ -1,16 +1,19 @@
-# Inherit device configuration for Motorola Atrix 2.
+# Release name
+PRODUCT_RELEASE_NAME := edison
+
+# Inherit device configuration for Atrix 2.
 $(call inherit-product, device/motorola/edison/full_edison.mk)
 
-# Inherit some common CM stuff.
-$(call inherit-product, vendor/cm/config/common_full_phone.mk)
+# Inherit some common SLIM stuff.
+$(call inherit-product, vendor/slim/config/common_full_phone.mk)
 
-# Inherit some common CM stuff.
-$(call inherit-product, vendor/cm/config/gsm.mk)
+# Inherit GSM common stuff
+$(call inherit-product, vendor/slim/config/gsm.mk)
 
 #
 # Setup device specific product configuration.
 #
-PRODUCT_NAME := cm_edison
+PRODUCT_NAME := slim_edison
 PRODUCT_BRAND := ATT
 PRODUCT_DEVICE := edison
 PRODUCT_MODEL := MB865

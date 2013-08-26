@@ -1,0 +1,12 @@
+[
+  {
+    "repository": "Atrix2-Dev-Team/android_device_motorola_omap4-common",
+    "target_path": "device/motorola/omap4-common"
+    "branch": "aosp4.3"
+  },
+  {
+    "repository": "CyanogenMod/android_kernel_motorola_omap4-common",
+    "target_path": "kernel/motorola/omap4-common"
+    "branch": "cm-10.2"
+  }
+]
